@@ -78,8 +78,39 @@ func main() {
     }
 
 	// # Services
+
+    if project.ServiceConfigs == nil {
+        // no service, abort?
+        fmt.Println("No services")
+    } else {
+        for name, config := range project.ServiceConfigs.All() {
+            // image, ports, networks, volumes
+            fmt.Println(fmt.Sprintf("Service: %s", project.Name + "_" + name))
+            if config.Image != "" {
+                fmt.Println(fmt.Sprintf("  Image: %s", config.Image))
+            } else {
+                // # if no image abort
+                fmt.Println("  No image!")
+            }
+            for _, port := range config.Ports {
+                fmt.Println(fmt.Sprintf("  Port: %s", port))
+            }
+            if config.Networks != nil && len(config.Networks.Networks) != 0 {
+                for _, network := range config.Networks.Networks {
+                    fmt.Println(fmt.Sprintf("  Network: %s", network.RealName))
+                }
+            }
+            if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
+                for _, volume := range config.Volumes.Volumes {
+                    fmt.Println(fmt.Sprintf("  Volume: %s", volume))
+                }
+            }
+        }
+    }
+
+    // # Exposed Ports
     // # Dependencies?
-   
+    // # More services config params 
     // # Timeouts / Errors
 
 }
