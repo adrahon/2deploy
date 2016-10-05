@@ -5,34 +5,33 @@ import (
     "fmt"
     "os"
     "path"
-    "context"
 
     "github.com/docker/libcompose/config"
     "github.com/docker/libcompose/project"
 
     "github.com/docker/docker/client"
-    "github.com/docker/docker/api/types"
 )
 
 func main() {
 
-    // # Get stack name from --name
-	// # Get stack name from directory if not passed 
-    pwd, err := os.Getwd()
-    if err != nil {
-        fmt.Println(err)
-        os.Exit(1)
-    }
-    _, dir := path.Split(pwd)
+    project_name := ProjectName()
 
     project := project.NewProject(&project.Context{
             ComposeFiles: []string{"docker-compose.yml"},
-            ProjectName:  dir,
+            ProjectName:  project_name,
     }, nil, &config.ParseOptions{})
 
     if err := project.Parse(); err != nil {
         log.Fatal(err)
     }
+
+    
+    cli, err := client.NewEnvClient()
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println(fmt.Sprintf("cli: %s", cli.ClientVersion()))
 
     // Networks
 
@@ -111,20 +110,6 @@ func main() {
             }
         }
 
-		cli, err := client.NewEnvClient()
-		if err != nil {
-			panic(err)
-		}
-
-		options := types.ImageListOptions{All: true}
-		images, err := cli.ImageList(context.Background(), options)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, c := range images {
-			fmt.Println(c.ID)
-		}
 	}
 
 	// # Exposed Ports
@@ -132,4 +117,17 @@ func main() {
 	// # More services config params 
 	// # Timeouts / Errors
 
+}
+
+func ProjectName() string {
+    // # Get stack name from --name
+	// # Get stack name from directory if not passed 
+    pwd, err := os.Getwd()
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
+    _, dir := path.Split(pwd)
+
+    return dir
 }
