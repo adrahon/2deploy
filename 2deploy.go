@@ -5,9 +5,13 @@ import (
     "fmt"
     "os"
     "path"
+    "context"
 
     "github.com/docker/libcompose/config"
     "github.com/docker/libcompose/project"
+
+    "github.com/docker/docker/client"
+    "github.com/docker/docker/api/types"
 )
 
 func main() {
@@ -106,11 +110,26 @@ func main() {
                 }
             }
         }
-    }
 
-    // # Exposed Ports
-    // # Dependencies?
-    // # More services config params 
-    // # Timeouts / Errors
+		cli, err := client.NewEnvClient()
+		if err != nil {
+			panic(err)
+		}
+
+		options := types.ImageListOptions{All: true}
+		images, err := cli.ImageList(context.Background(), options)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, c := range images {
+			fmt.Println(c.ID)
+		}
+	}
+
+	// # Exposed Ports
+	// # Dependencies?
+	// # More services config params 
+	// # Timeouts / Errors
 
 }
