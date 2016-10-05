@@ -5,11 +5,16 @@ import (
     "fmt"
     "os"
     "path"
+    "regexp"
+    "strings"
+
+    "golang.org/x/net/context"
 
     "github.com/docker/libcompose/config"
     "github.com/docker/libcompose/project"
 
     "github.com/docker/docker/client"
+    "github.com/docker/docker/api/types"
 )
 
 func main() {
@@ -33,11 +38,18 @@ func main() {
 
     fmt.Println(fmt.Sprintf("cli: %s", cli.ClientVersion()))
 
+    // # Check if stack exists
+
     // Networks
 
     if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
         // if no network create default
-        fmt.Println("No networks!")
+        name := fmt.Sprintf("%s_default", project_name)
+		config := config.NetworkConfig { Driver: "default", }
+		err := NetworkCreate(cli, name, &config)
+		if err != nil {
+			fmt.Println(err)
+		}
     } else {
         for name, config := range project.NetworkConfigs {
             // # if network external check if exists
@@ -48,13 +60,12 @@ func main() {
                     fmt.Println(fmt.Sprintf("Network: %s (external: %s)", name, config.External.Name))
                 }
             } else {
-                // # else create network
-                // # if no driver set default
-                if config.Driver != "" {
-                    fmt.Println(fmt.Sprintf("Network: %s (driver: %s)", name, config.Driver))
-                } else {
-                    fmt.Println(fmt.Sprintf("Network: %s (driver: default)", name))
-                }
+                // else create network
+                realname := fmt.Sprintf("%s_%s", project_name, name)
+				err := NetworkCreate(cli, realname, config)
+				if err != nil {
+					fmt.Println(err)
+				}
             }
         }
     }
@@ -129,5 +140,16 @@ func ProjectName() string {
     }
     _, dir := path.Split(pwd)
 
-    return dir
+    r := regexp.MustCompile("[^a-z0-9]+")
+    return r.ReplaceAllString(strings.ToLower(dir), "")
+}
+
+func NetworkCreate(cli client.APIClient, name string, network *config.NetworkConfig) error {
+    fmt.Printf("Creating network %q with driver %q\n", name, network.Driver)
+    _, err := cli.NetworkCreate(context.Background(), name, types.NetworkCreate{
+        CheckDuplicate: true,
+        Driver: network.Driver,
+    })
+
+    return err
 }
