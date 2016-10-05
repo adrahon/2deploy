@@ -58,6 +58,25 @@ func main() {
 
     // # Volumes
 
+    if project.VolumeConfigs == nil || len(project.VolumeConfigs) == 0 {
+        // no volumes
+        fmt.Println("No volumes")
+    } else {
+        for name, config := range project.VolumeConfigs {
+            // # if volume external check if exists
+            if config.External.External {
+                fmt.Println(fmt.Sprintf("Volume: %s (external)", name))
+                // handle external name
+                if config.External.Name != "" {
+                    fmt.Println(fmt.Sprintf("Volume: %s (external: %s)", name, config.External.Name))
+                }
+            } else {
+                // # else create volume
+                fmt.Println(fmt.Sprintf("Volume: %s", name))
+            }
+        }
+    }
+
 	// # Services
     // # Dependencies?
    
