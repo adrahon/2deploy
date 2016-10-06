@@ -57,7 +57,7 @@ func main() {
                 if config.External.Name != "" {
                     real_name = config.External.Name
                 }
-                fmt.Println(fmt.Sprintf("Checking if external network %q exists", real_name))
+                fmt.Printf("Checking if external network %q exists\n", real_name)
                 err := CheckNetworkExists(cli, real_name)
 				if err != nil {
 					fmt.Println(err)
@@ -84,14 +84,14 @@ func main() {
         for name, config := range project.VolumeConfigs {
             // # if volume external check if exists
             if config.External.External {
-                fmt.Println(fmt.Sprintf("Volume: %s (external)", name))
+                fmt.Printf("Volume: %q (external)\n", name)
                 // handle external name
                 if config.External.Name != "" {
-                    fmt.Println(fmt.Sprintf("Volume: %s (external: %s)", name, config.External.Name))
+                    fmt.Printf("Volume: %q (external: %q)\n", name, config.External.Name)
                 }
             } else {
                 // # else create volume
-                fmt.Println(fmt.Sprintf("Volume: %s", name))
+                fmt.Printf("Volume: %q\n", name)
             }
         }
     }
@@ -104,24 +104,24 @@ func main() {
     } else {
         for name, config := range project.ServiceConfigs.All() {
             // image, ports, networks, volumes
-            fmt.Println(fmt.Sprintf("Service: %s", project.Name + "_" + name))
+            fmt.Printf("Service: %q\n", project.Name + "_" + name)
             if config.Image != "" {
-                fmt.Println(fmt.Sprintf("  Image: %s", config.Image))
+                fmt.Printf("  Image: %q\n", config.Image)
             } else {
                 // # if no image abort
                 fmt.Println("  No image!")
             }
             for _, port := range config.Ports {
-                fmt.Println(fmt.Sprintf("  Port: %s", port))
+                fmt.Printf("  Port: %q\n", port)
             }
             if config.Networks != nil && len(config.Networks.Networks) != 0 {
                 for _, network := range config.Networks.Networks {
-                    fmt.Println(fmt.Sprintf("  Network: %s", network.RealName))
+                    fmt.Printf("  Network: %q\n", network.RealName)
                 }
             }
             if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
                 for _, volume := range config.Volumes.Volumes {
-                    fmt.Println(fmt.Sprintf("  Volume: %s", volume))
+                    fmt.Printf("  Volume: %q\n", volume)
                 }
             }
         }
