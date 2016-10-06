@@ -6,6 +6,7 @@ import (
     "path"
     "regexp"
     "strings"
+    "strconv"
 
     "golang.org/x/net/context"
 
@@ -14,6 +15,7 @@ import (
 
     "github.com/docker/docker/client"
     "github.com/docker/docker/api/types"
+    "github.com/docker/docker/api/types/swarm"
     "github.com/docker/docker/api/types/filters"
 )
 
@@ -104,17 +106,62 @@ func main() {
 		os.Exit(1)
     } else {
         for name, config := range project.ServiceConfigs.All() {
-            fmt.Printf("Service: %q\n", project.Name + "_" + name)
-            if config.Image != "" {
-                fmt.Printf("  Image: %q\n", config.Image)
-            } else {
-                // # if no image abort
-                fmt.Println("  no image defined for service, aborting")
+			service_name := fmt.Sprintf("%s_%s", project_name, name)
+
+            ports := []swarm.PortConfig{}
+            for _, p := range config.Ports {
+                port := strings.Split(p, ":") 
+                if len(port) > 1 {
+                    t, _ := strconv.Atoi(port[1])
+                    p, _ := strconv.Atoi(port[0])
+					ports = append(ports, swarm.PortConfig{
+						TargetPort:    uint32(t),
+						PublishedPort: uint32(p),
+					})
+                } else {
+                    t, _ := strconv.Atoi(port[0])
+					ports = append(ports, swarm.PortConfig{
+						TargetPort:    uint32(t),
+					})
+                }
+            }
+
+			nets := []swarm.NetworkAttachmentConfig{}
+            if config.Networks != nil && len(config.Networks.Networks) != 0 {
+                for _, network := range config.Networks.Networks {
+					nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
+                }
+			}
+
+			service_spec := swarm.ServiceSpec{
+				Annotations: swarm.Annotations{
+					Name:   service_name,
+				},
+				TaskTemplate: swarm.TaskSpec{
+					ContainerSpec: swarm.ContainerSpec{
+						Image:   config.Image,
+						Command: config.Command,
+						//Args:    service.Args,
+						Env:     config.Environment,
+					},
+				},
+				EndpointSpec: &swarm.EndpointSpec{
+			    		Ports: ports,
+				},
+				Networks: nets,
+			}
+
+            fmt.Printf("Creating service %q\n", service_name)
+
+            s, err := cli.ServiceCreate(context.Background(), service_spec, types.ServiceCreateOptions{})
+			if err != nil {
+				fmt.Println(err)
 				os.Exit(1)
-            }
-            for _, port := range config.Ports {
-                fmt.Printf("  Port: %q\n", port)
-            }
+			}
+ 
+            fmt.Printf("ID: %s\n\n", s.ID)
+            fmt.Println(s)
+
             if config.Networks != nil && len(config.Networks.Networks) != 0 {
                 for _, network := range config.Networks.Networks {
                     fmt.Printf("  Network: %q\n", network.RealName)
