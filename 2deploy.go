@@ -1,7 +1,6 @@
 package main
 
 import (
-    "log"
     "fmt"
     "os"
     "path"
@@ -28,13 +27,14 @@ func main() {
     }, nil, &config.ParseOptions{})
 
     if err := project.Parse(); err != nil {
-        log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
     }
 
-    
     cli, err := client.NewEnvClient()
     if err != nil {
-        panic(err)
+		fmt.Println(err)
+		os.Exit(1)
     }
 
     // # Check if stack exists
@@ -99,17 +99,18 @@ func main() {
 	// # Services
 
     if project.ServiceConfigs == nil {
-        // no service, abort?
-        fmt.Println("No services")
+        // no services, abort
+		fmt.Println("No services defined, aborting")
+		os.Exit(1)
     } else {
         for name, config := range project.ServiceConfigs.All() {
-            // image, ports, networks, volumes
             fmt.Printf("Service: %q\n", project.Name + "_" + name)
             if config.Image != "" {
                 fmt.Printf("  Image: %q\n", config.Image)
             } else {
                 // # if no image abort
-                fmt.Println("  No image!")
+                fmt.Println("  no image defined for service, aborting")
+				os.Exit(1)
             }
             for _, port := range config.Ports {
                 fmt.Printf("  Port: %q\n", port)
