@@ -57,7 +57,7 @@ func main() {
                 if config.External.Name != "" {
                     real_name = config.External.Name
                 }
-                fmt.Println(fmt.Sprintf("Checking if external network \"%s\" exists", real_name))
+                fmt.Println(fmt.Sprintf("Checking if external network %q exists", real_name))
                 err := CheckNetworkExists(cli, real_name)
 				if err != nil {
 					fmt.Println(err)
@@ -151,10 +151,16 @@ func ProjectName() string {
 
 func NetworkCreate(cli client.APIClient, name string, network *config.NetworkConfig) error {
     fmt.Printf("Creating network %q with driver %q\n", name, network.Driver)
-    _, err := cli.NetworkCreate(context.Background(), name, types.NetworkCreate{
-        CheckDuplicate: true,
-        Driver: network.Driver,
-    })
+    err := CheckNetworkExists(cli, name)
+	if err != nil {
+		_, err := cli.NetworkCreate(context.Background(), name, types.NetworkCreate{
+			CheckDuplicate: true,
+			Driver: network.Driver,
+		})
+		return err
+    } else {
+        fmt.Printf("Network %q exists, skipping\n", name)
+	}
     return err
 }
 
