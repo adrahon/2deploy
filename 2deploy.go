@@ -15,6 +15,7 @@ import (
 
     "github.com/docker/docker/client"
     "github.com/docker/docker/api/types"
+    "github.com/docker/docker/api/types/filters"
 )
 
 func main() {
@@ -36,8 +37,6 @@ func main() {
         panic(err)
     }
 
-    fmt.Println(fmt.Sprintf("cli: %s", cli.ClientVersion()))
-
     // # Check if stack exists
 
     // Networks
@@ -54,15 +53,21 @@ func main() {
         for name, config := range project.NetworkConfigs {
             // # if network external check if exists
             if config.External.External {
-                fmt.Println(fmt.Sprintf("Network: %s (external)", name))
-                // handle external name
+                real_name := name
                 if config.External.Name != "" {
-                    fmt.Println(fmt.Sprintf("Network: %s (external: %s)", name, config.External.Name))
+                    real_name = config.External.Name
                 }
+                fmt.Println(fmt.Sprintf("Checking if external network \"%s\" exists", real_name))
+                err := CheckNetworkExists(cli, real_name)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+
             } else {
                 // else create network
-                realname := fmt.Sprintf("%s_%s", project_name, name)
-				err := NetworkCreate(cli, realname, config)
+                real_name := fmt.Sprintf("%s_%s", project_name, name)
+				err := NetworkCreate(cli, real_name, config)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -150,6 +155,21 @@ func NetworkCreate(cli client.APIClient, name string, network *config.NetworkCon
         CheckDuplicate: true,
         Driver: network.Driver,
     })
-
     return err
+}
+
+func CheckNetworkExists(cli client.APIClient, name string) error {
+    filter := filters.NewArgs()
+    filter.Add("name", name)
+	list_options := types.NetworkListOptions{
+		Filters: filter,
+	}
+	networkResources, err := cli.NetworkList(context.Background(), list_options)
+	if err != nil {
+		return err
+	}
+	if len(networkResources) != 1 {
+	    return fmt.Errorf("Network %s could not be found.", name)
+	}
+	return err
 }
