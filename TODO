@@ -1,0 +1,5 @@
+volumes
+cleanup on abort/cancel
+global client, context
+network exists logic
+service dependencies

@@ -160,13 +160,7 @@ func main() {
 			}
  
             fmt.Printf("ID: %s\n\n", s.ID)
-            fmt.Println(s)
 
-            if config.Networks != nil && len(config.Networks.Networks) != 0 {
-                for _, network := range config.Networks.Networks {
-                    fmt.Printf("  Network: %q\n", network.RealName)
-                }
-            }
             if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
                 for _, volume := range config.Volumes.Volumes {
                     fmt.Printf("  Volume: %q\n", volume)
@@ -175,11 +169,6 @@ func main() {
         }
 
 	}
-
-	// # Exposed Ports
-	// # Dependencies?
-	// # More services config params 
-	// # Timeouts / Errors
 
 }
 
