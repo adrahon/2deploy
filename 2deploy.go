@@ -46,6 +46,7 @@ func main() {
 
     // Networks
 
+    default_network := ""
     if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
         // if no network create default
         name := fmt.Sprintf("%s_default", project_name)
@@ -54,6 +55,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
+        default_network = name
     } else {
         for name, config := range project.NetworkConfigs {
             // # if network external check if exists
@@ -130,12 +132,16 @@ func main() {
             }
 
 			nets := []swarm.NetworkAttachmentConfig{}
-            if config.Networks != nil && len(config.Networks.Networks) != 0 {
-                for _, network := range config.Networks.Networks {
-					nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
-                    fmt.Printf(" Network: %q (external)\n", network.RealName)
+            // use default network if exists
+            if default_network != "" {
+                nets = append(nets, swarm.NetworkAttachmentConfig{Target: default_network})
+            } else {
+                if config.Networks != nil && len(config.Networks.Networks) != 0 {
+                    for _, network := range config.Networks.Networks {
+                        nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
+                    }
                 }
-			}
+            }
 
 			service_spec := swarm.ServiceSpec{
 				Annotations: swarm.Annotations{
