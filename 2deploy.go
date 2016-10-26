@@ -10,13 +10,14 @@ import (
 
     "golang.org/x/net/context"
 
+    "github.com/adrahon/2deploy/deployer"
+
     "github.com/docker/libcompose/config"
     "github.com/docker/libcompose/project"
 
     "github.com/docker/docker/client"
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/swarm"
-    "github.com/docker/docker/api/types/filters"
 )
 
 func main() {
@@ -39,6 +40,8 @@ func main() {
 		os.Exit(1)
     }
 
+    deployer := deployer.NewDeployer(cli, context.Background())
+
     // # Check if stack exists
 
     // Networks
@@ -46,8 +49,8 @@ func main() {
     if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
         // if no network create default
         name := fmt.Sprintf("%s_default", project_name)
-		config := config.NetworkConfig { Driver: "default", }
-		err := NetworkCreate(cli, name, &config)
+        config := config.NetworkConfig { Driver: "overlay", }
+		err := deployer.NetworkCreate(name, &config)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -60,7 +63,7 @@ func main() {
                     real_name = config.External.Name
                 }
                 fmt.Printf("Checking if external network %q exists\n", real_name)
-                err := CheckNetworkExists(cli, real_name)
+                err := deployer.CheckNetworkExists(real_name)
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
@@ -69,7 +72,7 @@ func main() {
             } else {
                 // else create network
                 real_name := fmt.Sprintf("%s_%s", project_name, name)
-				err := NetworkCreate(cli, real_name, config)
+				err := deployer.NetworkCreate(real_name, config)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -130,6 +133,7 @@ func main() {
             if config.Networks != nil && len(config.Networks.Networks) != 0 {
                 for _, network := range config.Networks.Networks {
 					nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
+                    fmt.Printf(" Network: %q (external)\n", network.RealName)
                 }
 			}
 
@@ -186,33 +190,3 @@ func ProjectName() string {
     return r.ReplaceAllString(strings.ToLower(dir), "")
 }
 
-func NetworkCreate(cli client.APIClient, name string, network *config.NetworkConfig) error {
-    fmt.Printf("Creating network %q with driver %q\n", name, network.Driver)
-    err := CheckNetworkExists(cli, name)
-	if err != nil {
-		_, err := cli.NetworkCreate(context.Background(), name, types.NetworkCreate{
-			CheckDuplicate: true,
-			Driver: network.Driver,
-		})
-		return err
-    } else {
-        fmt.Printf("Network %q exists, skipping\n", name)
-	}
-    return err
-}
-
-func CheckNetworkExists(cli client.APIClient, name string) error {
-    filter := filters.NewArgs()
-    filter.Add("name", name)
-	list_options := types.NetworkListOptions{
-		Filters: filter,
-	}
-	networkResources, err := cli.NetworkList(context.Background(), list_options)
-	if err != nil {
-		return err
-	}
-	if len(networkResources) != 1 {
-	    return fmt.Errorf("Network %s could not be found.", name)
-	}
-	return err
-}
