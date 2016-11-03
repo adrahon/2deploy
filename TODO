@@ -1,4 +1,6 @@
-volumes
+volumes: read only?
+service names and discovery?
 cleanup on abort/cancel
 network exists logic
 service dependencies
+project name parameter
