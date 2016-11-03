@@ -23,6 +23,7 @@ import (
 )
 
 var projectFlag = flag.String("p", "", "Specify an alternate project name (default: directory name)")
+var fileFlag = flag.String("f", "docker-compose.yml", "Specify an alternate compose file")
 
 func main() {
 
@@ -32,8 +33,10 @@ func main() {
         project_name = ProjectName()
     }
 
+    compose_file := *fileFlag
+
     project := project.NewProject(&project.Context{
-            ComposeFiles: []string{"docker-compose.yml"},
+            ComposeFiles: []string{compose_file},
             ProjectName:  project_name,
     }, nil, &config.ParseOptions{})
 

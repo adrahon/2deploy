@@ -4,6 +4,4 @@ handle deletion
 cleanup on abort/cancel
 network exists logic
 service dependencies
-project name parameter
-compose file name parameter
 issue with deploy while network being deleted
