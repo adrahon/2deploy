@@ -85,10 +85,7 @@ func main() {
 
     // # Volumes
 
-    if project.VolumeConfigs == nil || len(project.VolumeConfigs) == 0 {
-        // no volumes
-        fmt.Println("No volumes")
-    } else {
+    if project.VolumeConfigs != nil && len(project.VolumeConfigs) != 0 {
         for name, config := range project.VolumeConfigs {
             // # if volume external check if exists
             if config.External.External {
@@ -184,19 +181,12 @@ func main() {
 
             fmt.Printf("Creating service %q\n", service_name)
 
-            s, err := cli.ServiceCreate(context.Background(), service_spec, types.ServiceCreateOptions{})
+            _, err := cli.ServiceCreate(context.Background(), service_spec, types.ServiceCreateOptions{})
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
  
-            fmt.Printf("ID: %s\n\n", s.ID)
-
-            if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
-                for _, volume := range config.Volumes.Volumes {
-                    fmt.Printf("  Volume: %q\n", volume)
-                }
-            }
         }
 
 	}
