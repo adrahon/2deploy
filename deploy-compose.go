@@ -10,7 +10,7 @@ import (
 
     "golang.org/x/net/context"
 
-    "github.com/adrahon/2deploy/deployer"
+    "github.com/adrahon/deploy-compose/deployer"
 
     "github.com/docker/libcompose/config"
     "github.com/docker/libcompose/project"
