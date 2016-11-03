@@ -18,6 +18,7 @@ import (
     "github.com/docker/docker/client"
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/swarm"
+     mounttypes "github.com/docker/docker/api/types/mount"
 )
 
 func main() {
@@ -96,8 +97,8 @@ func main() {
                 if config.External.Name != "" {
                     fmt.Printf("Volume: %q (external: %q)\n", name, config.External.Name)
                 }
-            } else {
-                // # else create volume
+            } else if config.Driver != "" {
+                // # else create volume ?
                 fmt.Printf("Volume: %q\n", name)
             }
         }
@@ -143,6 +144,13 @@ func main() {
                 }
             }
 
+			mounts := []mounttypes.Mount{}
+			if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
+				for _, volume := range config.Volumes.Volumes {
+                    mounts = append(mounts, mounttypes.Mount{ Type: mounttypes.TypeVolume, Target: volume.Destination, })
+				}
+			}
+
 			service_spec := swarm.ServiceSpec{
 				Annotations: swarm.Annotations{
 					Name:   service_name,
@@ -151,9 +159,22 @@ func main() {
 					ContainerSpec: swarm.ContainerSpec{
 						Image:   config.Image,
 						Command: config.Command,
-						//Args:    service.Args,
+						// Args:    service.Args,
 						Env:     config.Environment,
+						// Labels:  runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
+						// Dir:             opts.workdir,
+						// User:            opts.user,
+						// Groups:          opts.groups,
+						Mounts:  mounts,
+						// StopGracePeriod: opts.stopGrace.Value(),
 					},
+					// Networks:      convertNetworks(opts.networks),
+					// Resources:     opts.resources.ToResourceRequirements(),
+					// RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
+					// Placement: &swarm.Placement{
+					//     Constraints: opts.constraints,
+					//},
+					// LogDriver: opts.logDriver.toLogDriver(),
 				},
 				EndpointSpec: &swarm.EndpointSpec{
 			    		Ports: ports,
