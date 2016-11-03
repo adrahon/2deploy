@@ -1,6 +1,7 @@
 package main
 
 import (
+    "flag"
     "fmt"
     "os"
     "path"
@@ -21,9 +22,15 @@ import (
      mounttypes "github.com/docker/docker/api/types/mount"
 )
 
+var projectFlag = flag.String("p", "", "Specify an alternate project name (default: directory name)")
+
 func main() {
 
-    project_name := ProjectName()
+    flag.Parse()
+    project_name := *projectFlag
+    if project_name == "" {
+        project_name = ProjectName()
+    }
 
     project := project.NewProject(&project.Context{
             ComposeFiles: []string{"docker-compose.yml"},
