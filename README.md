@@ -6,7 +6,7 @@ A utiliy to deploy services defined in a compose file to swarm-mode clusters.
 
 ```
 Usage:
-  docker-compose [-f <arg>...] [options]
+  deploy-compose [-f <arg>...] [options]
 
 Options:
   -f FILE   Specify an alternate compose file (default: docker-compose.yml)
