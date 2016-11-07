@@ -12,11 +12,18 @@ import (
     "github.com/docker/docker/api/types/swarm"
 )
 
+// Network holds information for one network
+type Network struct {
+    RealName string // name in swarm
+    Config    config.NetworkConfig
+}
+
 // Deployer holds information for deploying the project
 type Deployer struct {
-    client  client.APIClient
-    context context.Context
-    Project string
+    client   client.APIClient
+    context  context.Context
+    Project  string
+    Networks map[string]Network
 }
 
 // NewDeployer creates a deployer
@@ -25,18 +32,19 @@ func NewDeployer(project string, client client.APIClient, context context.Contex
         client:  client,
         context: context,
         Project: project,
+        Networks: make(map[string]Network),
     }
 
     return d
 }
 
-func (d *Deployer) NetworkCreate(name string, network *config.NetworkConfig) error {
-    fmt.Printf("Creating network %q with driver %q\n", name, network.Driver)
+func (d *Deployer) NetworkCreate(name string) error {
+    fmt.Printf("Creating network %q with driver %q\n", name, d.Networks[name].Config.Driver)
     err := d.CheckNetworkExists(name)
     if err != nil {
         _, err := d.client.NetworkCreate(d.context, name, types.NetworkCreate{
             CheckDuplicate: true,
-            Driver: network.Driver,
+            Driver: d.Networks[name].Config.Driver,
         })
         return err
     } else {
@@ -47,7 +55,8 @@ func (d *Deployer) NetworkCreate(name string, network *config.NetworkConfig) err
 
 func (d *Deployer) CheckNetworkExists(name string) error {
     filter := filters.NewArgs()
-    filter.Add("name", name)
+    realname := d.Networks[name].RealName
+    filter.Add("name", realname)
     list_options := types.NetworkListOptions{
         Filters: filter,
     }

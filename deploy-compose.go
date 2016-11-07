@@ -63,6 +63,7 @@ func main() {
     }
 
     deployer := deployer.NewDeployer(project_name, cli, context.Background())
+    initDeployer(deployer, project)
 
     // Select command to run
     switch command {
@@ -84,6 +85,34 @@ func main() {
     }
 }
 
+func initDeployer(d *deployer.Deployer, project *project.Project) {
+
+    // Networks
+
+    if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
+        // if no network create default
+        name := fmt.Sprintf("%s_default", d.Project)
+        config := config.NetworkConfig { Driver: "overlay", }
+        network := deployer.Network { RealName: name, Config: config }
+		d.Networks[name] = network
+    } else {
+        for name, config := range project.NetworkConfigs {
+            realname := name
+            // if network external keep name
+            if config.External.External {
+                if config.External.Name != "" {
+                    realname = config.External.Name
+                }
+            } else {
+                // namespace name
+                realname = fmt.Sprintf("%s_%s", d.Project, name)
+            }
+            network := deployer.Network { RealName: realname, Config: *config}
+            d.Networks[name] = network
+        }
+    }
+}
+
 func usage() {
     fmt.Printf("A utiliy to deploy services defined in a compose file to swarm-mode clusters.\n")
     fmt.Printf("\nUsage:\n")
@@ -101,41 +130,24 @@ func up(deployer *deployer.Deployer, project *project.Project) {
 
     // Networks
 
-    default_network := ""
-    if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
-        // if no network create default
-        name := fmt.Sprintf("%s_default", deployer.Project)
-        config := config.NetworkConfig { Driver: "overlay", }
-		err := deployer.NetworkCreate(name, &config)
-		if err != nil {
-			fmt.Println(err)
-		}
-        default_network = name
-    } else {
-        for name, config := range project.NetworkConfigs {
-            // # if network external check if exists
-            if config.External.External {
-                real_name := name
-                if config.External.Name != "" {
-                    real_name = config.External.Name
-                }
-                fmt.Printf("Checking if external network %q exists\n", real_name)
-                err := deployer.CheckNetworkExists(real_name)
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-
-            } else {
-                // else create network
-                real_name := fmt.Sprintf("%s_%s", deployer.Project, name)
-				err := deployer.NetworkCreate(real_name, config)
-				if err != nil {
-					fmt.Println(err)
-				}
+    for name, network := range deployer.Networks {
+        // if network external check if exists
+        if network.Config.External.External {
+            fmt.Printf("Checking if external network %q exists\n", name)
+            err := deployer.CheckNetworkExists(name)
+            if err != nil {
+                fmt.Println(err)
+                os.Exit(1)
+            }
+        } else {
+            // else create network
+            err := deployer.NetworkCreate(name)
+            if err != nil {
+                fmt.Println(err)
             }
         }
     }
+
 
     // # Volumes
 
@@ -184,14 +196,16 @@ func up(deployer *deployer.Deployer, project *project.Project) {
             }
 
 			nets := []swarm.NetworkAttachmentConfig{}
-            // use default network if exists
-            if default_network != "" {
-                nets = append(nets, swarm.NetworkAttachmentConfig{Target: default_network})
+            if config.Networks == nil || len(config.Networks.Networks) == 0 {
+                // if default network defined use for service
+                network := deployer.Networks[fmt.Sprintf("%s_default", deployer.Project)] // 🤔
+                if network.RealName != "" {
+                    nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
+                }
+                // XXX behaviour if no default network && none defined?
             } else {
-                if config.Networks != nil && len(config.Networks.Networks) != 0 {
-                    for _, network := range config.Networks.Networks {
-                        nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
-                    }
+                for _, network := range deployer.Networks {
+                    nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
                 }
             }
 
