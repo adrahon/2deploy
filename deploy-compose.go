@@ -62,7 +62,7 @@ func main() {
 		os.Exit(1)
     }
 
-    deployer := deployer.NewDeployer(cli, context.Background())
+    deployer := deployer.NewDeployer(project_name, cli, context.Background())
 
     // Select command to run
     switch command {
@@ -77,8 +77,7 @@ func main() {
     case "rm":
         fmt.Println("command: ", command)
     case "up":
-        fmt.Println("command: ", command)
-        up(deployer, project_name, project)
+        up(deployer, project)
     default:
         fmt.Fprintf(os.Stderr, "No such command: %s\n", command)
         usage()
@@ -96,7 +95,7 @@ func usage() {
     fmt.Printf("  up                 Create and start services\n")
 }
 
-func up(deployer *deployer.Deployer, project_name string, project *project.Project) {
+func up(deployer *deployer.Deployer, project *project.Project) {
 
     // TODO Check if stack exists
 
@@ -105,7 +104,7 @@ func up(deployer *deployer.Deployer, project_name string, project *project.Proje
     default_network := ""
     if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
         // if no network create default
-        name := fmt.Sprintf("%s_default", project_name)
+        name := fmt.Sprintf("%s_default", deployer.Project)
         config := config.NetworkConfig { Driver: "overlay", }
 		err := deployer.NetworkCreate(name, &config)
 		if err != nil {
@@ -129,7 +128,7 @@ func up(deployer *deployer.Deployer, project_name string, project *project.Proje
 
             } else {
                 // else create network
-                real_name := fmt.Sprintf("%s_%s", project_name, name)
+                real_name := fmt.Sprintf("%s_%s", deployer.Project, name)
 				err := deployer.NetworkCreate(real_name, config)
 				if err != nil {
 					fmt.Println(err)
@@ -164,7 +163,7 @@ func up(deployer *deployer.Deployer, project_name string, project *project.Proje
 		os.Exit(1)
     } else {
         for name, config := range project.ServiceConfigs.All() {
-			service_name := fmt.Sprintf("%s_%s", project_name, name)
+			service_name := fmt.Sprintf("%s_%s", deployer.Project, name)
 
             ports := []swarm.PortConfig{}
             for _, p := range config.Ports {

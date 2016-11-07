@@ -16,13 +16,15 @@ import (
 type Deployer struct {
     client  client.APIClient
     context context.Context
+    Project string
 }
 
 // NewDeployer creates a deployer
-func NewDeployer(client client.APIClient, context context.Context) *Deployer {
+func NewDeployer(project string, client client.APIClient, context context.Context) *Deployer {
     d := &Deployer{
         client:  client,
         context: context,
+        Project: project,
     }
 
     return d
