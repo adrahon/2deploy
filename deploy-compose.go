@@ -27,6 +27,8 @@ var fileFlag = flag.String("f", "docker-compose.yml", "Specify an alternate comp
 
 func main() {
 
+    // Process command and parameters
+
     flag.Parse()
     project_name := *projectFlag
     if project_name == "" {
@@ -40,11 +42,18 @@ func main() {
             ProjectName:  project_name,
     }, nil, &config.ParseOptions{})
 
+    command := "usage"
+    if len(flag.Args()) > 0 {
+        command = flag.Args()[0]
+    }
+
+    // Load compose file
     if err := project.Parse(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
     }
 
+    // Initialize Docker client
     cli, err := client.NewEnvClient()
     if err != nil {
 		fmt.Println(err)
@@ -53,7 +62,29 @@ func main() {
 
     deployer := deployer.NewDeployer(cli, context.Background())
 
-    // # Check if stack exists
+    // Select command to run
+    switch command {
+    case "config":
+        fmt.Println("command: ", command)
+    case "create":
+        fmt.Println("command: ", command)
+    case "-h", "help":
+        fmt.Println("command: usage")
+    case "restart":
+        fmt.Println("command: ", command)
+    case "rm":
+        fmt.Println("command: ", command)
+    case "up":
+        fmt.Println("command: ", command)
+        up(deployer, project_name, project)
+    default:
+        fmt.Println("command: error, usage")
+    }
+}
+
+func up(deployer *deployer.Deployer, project_name string, project *project.Project) {
+
+    // TODO Check if stack exists
 
     // Networks
 
@@ -191,7 +222,7 @@ func main() {
 
             fmt.Printf("Creating service %q\n", service_name)
 
-            _, err := cli.ServiceCreate(context.Background(), service_spec, types.ServiceCreateOptions{})
+            _, err := deployer.ServiceCreate(service_spec, types.ServiceCreateOptions{})
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)

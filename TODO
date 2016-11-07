@@ -1,7 +1,16 @@
 volumes: read only?
 service names and discovery?
 handle deletion
+handle individual services
 cleanup on abort/cancel
 network exists logic
 service dependencies
 issue with deploy while network being deleted
+compose commands to implement:
+  config             Validate and view the compose file
+  create             Create services
+  down               Stop and remove containers, networks, images, and volumes
+  restart            Restart services
+  rm                 Remove stopped containers
+  up                 Create and start containers
+

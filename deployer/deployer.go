@@ -9,6 +9,7 @@ import (
     "github.com/docker/docker/client"
     "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+    "github.com/docker/docker/api/types/swarm"
 )
 
 // Deployer holds information for deploying the project
@@ -57,4 +58,10 @@ func (d *Deployer) CheckNetworkExists(name string) error {
     }
     return err
 }
+
+func (d *Deployer) ServiceCreate(service swarm.ServiceSpec, options types.ServiceCreateOptions) (types.ServiceCreateResponse, error) {
+    response, err := d.client.ServiceCreate(d.context, service, options)
+    return response, err
+}
+
 
