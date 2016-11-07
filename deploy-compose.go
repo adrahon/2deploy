@@ -29,6 +29,8 @@ func main() {
 
     // Process command and parameters
 
+    flag.Usage = usage
+
     flag.Parse()
     project_name := *projectFlag
     if project_name == "" {
@@ -68,8 +70,8 @@ func main() {
         fmt.Println("command: ", command)
     case "create":
         fmt.Println("command: ", command)
-    case "-h", "help":
-        fmt.Println("command: usage")
+    case "help":
+        usage()
     case "restart":
         fmt.Println("command: ", command)
     case "rm":
@@ -78,8 +80,20 @@ func main() {
         fmt.Println("command: ", command)
         up(deployer, project_name, project)
     default:
-        fmt.Println("command: error, usage")
+        fmt.Fprintf(os.Stderr, "No such command: %s\n", command)
+        usage()
     }
+}
+
+func usage() {
+    fmt.Printf("A utiliy to deploy services defined in a compose file to swarm-mode clusters.\n")
+    fmt.Printf("\nUsage:\n")
+    fmt.Printf("  %s [options] [COMMAND]\n", os.Args[0])
+    fmt.Printf("  %s -h|--help\n", os.Args[0])
+    fmt.Printf("\nOptions:\n")
+    flag.PrintDefaults()
+    fmt.Printf("\nCommands:\n")
+    fmt.Printf("  up                 Create and start services\n")
 }
 
 func up(deployer *deployer.Deployer, project_name string, project *project.Project) {
