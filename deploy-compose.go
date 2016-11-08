@@ -17,9 +17,8 @@ import (
     "github.com/docker/libcompose/project"
 
     "github.com/docker/docker/client"
-    "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/swarm"
-     mounttypes "github.com/docker/docker/api/types/mount"
+    mounttypes "github.com/docker/docker/api/types/mount"
 )
 
 var projectFlag = flag.String("p", "", "Specify an alternate project name (default: directory name)")
@@ -40,8 +39,8 @@ func main() {
     compose_file := *fileFlag
 
     project := project.NewProject(&project.Context{
-            ComposeFiles: []string{compose_file},
-            ProjectName:  project_name,
+        ComposeFiles: []string{compose_file},
+        ProjectName:  project_name,
     }, nil, &config.ParseOptions{})
 
     command := "usage"
@@ -51,15 +50,15 @@ func main() {
 
     // Load compose file
     if err := project.Parse(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+        fmt.Println(err)
+        os.Exit(1)
     }
 
     // Initialize Docker client
     cli, err := client.NewEnvClient()
     if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+        fmt.Println(err)
+        os.Exit(1)
     }
 
     deployer := deployer.NewDeployer(project_name, cli, context.Background())
@@ -88,13 +87,12 @@ func main() {
 func initDeployer(d *deployer.Deployer, project *project.Project) {
 
     // Networks
-
     if project.NetworkConfigs == nil || len(project.NetworkConfigs) == 0 {
         // if no network create default
         name := fmt.Sprintf("%s_default", d.Project)
         config := config.NetworkConfig { Driver: "overlay", }
         network := deployer.Network { RealName: name, Config: config }
-		d.Networks[name] = network
+        d.Networks[name] = network
     } else {
         for name, config := range project.NetworkConfigs {
             realname := name
@@ -109,6 +107,104 @@ func initDeployer(d *deployer.Deployer, project *project.Project) {
             }
             network := deployer.Network { RealName: realname, Config: *config}
             d.Networks[name] = network
+        }
+    }
+
+    // # Volumes
+    if project.VolumeConfigs != nil && len(project.VolumeConfigs) != 0 {
+        for name, config := range project.VolumeConfigs {
+            // # if volume external check if exists
+            if config.External.External {
+                fmt.Printf("Volume: %q (external)\n", name)
+                // handle external name
+                if config.External.Name != "" {
+                    fmt.Printf("Volume: %q (external: %q)\n", name, config.External.Name)
+                }
+            } else if config.Driver != "" {
+                // # else create volume ?
+                fmt.Printf("Volume: %q\n", name)
+            }
+        }
+    }
+
+    // # Services
+    if project.ServiceConfigs != nil {
+        for name, config := range project.ServiceConfigs.All() {
+            realname := fmt.Sprintf("%s_%s", d.Project, name)
+
+            ports := []swarm.PortConfig{}
+            for _, p := range config.Ports {
+                port := strings.Split(p, ":") 
+                if len(port) > 1 {
+                    t, _ := strconv.Atoi(port[1])
+                    p, _ := strconv.Atoi(port[0])
+                    ports = append(ports, swarm.PortConfig{
+                        TargetPort:    uint32(t),
+                        PublishedPort: uint32(p),
+                    })
+                } else {
+                    t, _ := strconv.Atoi(port[0])
+                    ports = append(ports, swarm.PortConfig{
+                        TargetPort:    uint32(t),
+                    })
+                }
+            }
+
+            nets := []swarm.NetworkAttachmentConfig{}
+            if config.Networks == nil || len(config.Networks.Networks) == 0 {
+                // if default network defined use for service
+                network := d.Networks[fmt.Sprintf("%s_default", d.Project)] // 🤔
+                if network.RealName != "" {
+                    nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
+                }
+                // XXX behaviour if no default network && none defined?
+            } else {
+                for _, network := range config.Networks.Networks {
+                    nets = append(nets, swarm.NetworkAttachmentConfig{Target: d.Networks[network.Name].RealName})
+                }
+            }
+
+            mounts := []mounttypes.Mount{}
+            if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
+                for _, volume := range config.Volumes.Volumes {
+                    mounts = append(mounts, mounttypes.Mount{ Type: mounttypes.TypeVolume, Target: volume.Destination, })
+                }
+            }
+
+            service_spec := swarm.ServiceSpec{
+                Annotations: swarm.Annotations{
+                    Name:   realname,
+                },
+                TaskTemplate: swarm.TaskSpec{
+                    ContainerSpec: swarm.ContainerSpec{
+                        Image:   config.Image,
+                        Command: config.Command,
+                        // Args:    service.Args,
+                        Env:     config.Environment,
+                        // Labels:  runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
+                        // Dir:             opts.workdir,
+                        // User:            opts.user,
+                        // Groups:          opts.groups,
+                        Mounts:  mounts,
+                        // StopGracePeriod: opts.stopGrace.Value(),
+                    },
+                    // Networks:      convertNetworks(opts.networks),
+                    // Resources:     opts.resources.ToResourceRequirements(),
+                    // RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
+                    // Placement: &swarm.Placement{
+                    //     Constraints: opts.constraints,
+                    //},
+                    // LogDriver: opts.logDriver.toLogDriver(),
+                },
+                EndpointSpec: &swarm.EndpointSpec{
+                    Ports: ports,
+                },
+                Networks: nets,
+            }
+
+            service := deployer.Service { RealName: realname, Spec: service_spec}
+            d.Services[name] = service
+
         }
     }
 }
@@ -129,7 +225,6 @@ func up(deployer *deployer.Deployer, project *project.Project) {
     // TODO Check if stack exists
 
     // Networks
-
     for name, network := range deployer.Networks {
         // if network external check if exists
         if network.Config.External.External {
@@ -148,122 +243,20 @@ func up(deployer *deployer.Deployer, project *project.Project) {
         }
     }
 
-
-    // # Volumes
-
-    if project.VolumeConfigs != nil && len(project.VolumeConfigs) != 0 {
-        for name, config := range project.VolumeConfigs {
-            // # if volume external check if exists
-            if config.External.External {
-                fmt.Printf("Volume: %q (external)\n", name)
-                // handle external name
-                if config.External.Name != "" {
-                    fmt.Printf("Volume: %q (external: %q)\n", name, config.External.Name)
-                }
-            } else if config.Driver != "" {
-                // # else create volume ?
-                fmt.Printf("Volume: %q\n", name)
+    // Services
+    for name, _ := range project.ServiceConfigs.All() {
+        _, err := deployer.ServiceCreate(name)
+            if err != nil {
+                fmt.Println(err)
+                os.Exit(1)
             }
-        }
     }
-
-	// # Services
-
-    if project.ServiceConfigs == nil {
-        // no services, abort
-		fmt.Println("No services defined, aborting")
-		os.Exit(1)
-    } else {
-        for name, config := range project.ServiceConfigs.All() {
-			service_name := fmt.Sprintf("%s_%s", deployer.Project, name)
-
-            ports := []swarm.PortConfig{}
-            for _, p := range config.Ports {
-                port := strings.Split(p, ":") 
-                if len(port) > 1 {
-                    t, _ := strconv.Atoi(port[1])
-                    p, _ := strconv.Atoi(port[0])
-					ports = append(ports, swarm.PortConfig{
-						TargetPort:    uint32(t),
-						PublishedPort: uint32(p),
-					})
-                } else {
-                    t, _ := strconv.Atoi(port[0])
-					ports = append(ports, swarm.PortConfig{
-						TargetPort:    uint32(t),
-					})
-                }
-            }
-
-			nets := []swarm.NetworkAttachmentConfig{}
-            if config.Networks == nil || len(config.Networks.Networks) == 0 {
-                // if default network defined use for service
-                network := deployer.Networks[fmt.Sprintf("%s_default", deployer.Project)] // 🤔
-                if network.RealName != "" {
-                    nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
-                }
-                // XXX behaviour if no default network && none defined?
-            } else {
-                for _, network := range deployer.Networks {
-                    nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
-                }
-            }
-
-			mounts := []mounttypes.Mount{}
-			if config.Volumes != nil && len(config.Volumes.Volumes) != 0 {
-				for _, volume := range config.Volumes.Volumes {
-                    mounts = append(mounts, mounttypes.Mount{ Type: mounttypes.TypeVolume, Target: volume.Destination, })
-				}
-			}
-
-			service_spec := swarm.ServiceSpec{
-				Annotations: swarm.Annotations{
-					Name:   service_name,
-				},
-				TaskTemplate: swarm.TaskSpec{
-					ContainerSpec: swarm.ContainerSpec{
-						Image:   config.Image,
-						Command: config.Command,
-						// Args:    service.Args,
-						Env:     config.Environment,
-						// Labels:  runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
-						// Dir:             opts.workdir,
-						// User:            opts.user,
-						// Groups:          opts.groups,
-						Mounts:  mounts,
-						// StopGracePeriod: opts.stopGrace.Value(),
-					},
-					// Networks:      convertNetworks(opts.networks),
-					// Resources:     opts.resources.ToResourceRequirements(),
-					// RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
-					// Placement: &swarm.Placement{
-					//     Constraints: opts.constraints,
-					//},
-					// LogDriver: opts.logDriver.toLogDriver(),
-				},
-				EndpointSpec: &swarm.EndpointSpec{
-			    		Ports: ports,
-				},
-				Networks: nets,
-			}
-
-            fmt.Printf("Creating service %q\n", service_name)
-
-            _, err := deployer.ServiceCreate(service_spec, types.ServiceCreateOptions{})
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
- 
-        }
-
-	}
 
 }
 
 func ProjectName() string {
     // # Get stack name from --name
-	// # Get stack name from directory if not passed 
+    // # Get stack name from directory if not passed 
     pwd, err := os.Getwd()
     if err != nil {
         fmt.Println(err)

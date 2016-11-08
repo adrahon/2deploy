@@ -18,12 +18,19 @@ type Network struct {
     Config    config.NetworkConfig
 }
 
+// Service holds information for one service
+type Service struct {
+    RealName string // name in swarm
+    Spec     swarm.ServiceSpec
+}
+
 // Deployer holds information for deploying the project
 type Deployer struct {
     client   client.APIClient
     context  context.Context
-    Project  string
     Networks map[string]Network
+    Project  string
+    Services map[string]Service
 }
 
 // NewDeployer creates a deployer
@@ -31,8 +38,9 @@ func NewDeployer(project string, client client.APIClient, context context.Contex
     d := &Deployer{
         client:  client,
         context: context,
-        Project: project,
         Networks: make(map[string]Network),
+        Project: project,
+        Services: make(map[string]Service),
     }
 
     return d
@@ -70,8 +78,8 @@ func (d *Deployer) CheckNetworkExists(name string) error {
     return err
 }
 
-func (d *Deployer) ServiceCreate(service swarm.ServiceSpec, options types.ServiceCreateOptions) (types.ServiceCreateResponse, error) {
-    response, err := d.client.ServiceCreate(d.context, service, options)
+func (d *Deployer) ServiceCreate(service string) (types.ServiceCreateResponse, error) {
+    response, err := d.client.ServiceCreate(d.context, d.Services[service].Spec, types.ServiceCreateOptions{})
     return response, err
 }
 
