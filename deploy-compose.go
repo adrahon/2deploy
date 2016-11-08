@@ -92,7 +92,7 @@ func initDeployer(d *deployer.Deployer, project *project.Project) {
         name := fmt.Sprintf("%s_default", d.Project)
         config := config.NetworkConfig { Driver: "overlay", }
         network := deployer.Network { RealName: name, Config: config }
-        d.Networks[name] = network
+        d.Networks["default"] = network
     } else {
         for name, config := range project.NetworkConfigs {
             realname := name
@@ -152,12 +152,12 @@ func initDeployer(d *deployer.Deployer, project *project.Project) {
 
             nets := []swarm.NetworkAttachmentConfig{}
             if config.Networks == nil || len(config.Networks.Networks) == 0 {
+                // This never happens?
                 // if default network defined use for service
                 network := d.Networks[fmt.Sprintf("%s_default", d.Project)] // 🤔
                 if network.RealName != "" {
                     nets = append(nets, swarm.NetworkAttachmentConfig{Target: network.RealName})
                 }
-                // XXX behaviour if no default network && none defined?
             } else {
                 for _, network := range config.Networks.Networks {
                     nets = append(nets, swarm.NetworkAttachmentConfig{Target: d.Networks[network.Name].RealName})
@@ -236,6 +236,7 @@ func up(deployer *deployer.Deployer, project *project.Project) {
             }
         } else {
             // else create network
+            fmt.Printf("Creating network %q with driver %q\n", deployer.Networks[name].RealName, deployer.Networks[name].Config.Driver)
             err := deployer.NetworkCreate(name)
             if err != nil {
                 fmt.Println(err)
@@ -245,11 +246,12 @@ func up(deployer *deployer.Deployer, project *project.Project) {
 
     // Services
     for name, _ := range project.ServiceConfigs.All() {
+        fmt.Printf("Creating service %q\n", deployer.Services[name].RealName)
         _, err := deployer.ServiceCreate(name)
-            if err != nil {
-                fmt.Println(err)
-                os.Exit(1)
-            }
+        if err != nil {
+            fmt.Println(err)
+            os.Exit(1)
+        }
     }
 
 }

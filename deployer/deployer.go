@@ -47,7 +47,6 @@ func NewDeployer(project string, client client.APIClient, context context.Contex
 }
 
 func (d *Deployer) NetworkCreate(name string) error {
-    fmt.Printf("Creating network %q with driver %q\n", name, d.Networks[name].Config.Driver)
     err := d.CheckNetworkExists(name)
     if err != nil {
         _, err := d.client.NetworkCreate(d.context, name, types.NetworkCreate{
