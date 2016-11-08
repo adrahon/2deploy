@@ -46,24 +46,9 @@ func NewDeployer(project string, client client.APIClient, context context.Contex
     return d
 }
 
-func (d *Deployer) NetworkCreate(name string) error {
-    err := d.CheckNetworkExists(name)
-    if err != nil {
-        _, err := d.client.NetworkCreate(d.context, d.Networks[name].RealName, types.NetworkCreate{
-            CheckDuplicate: true,
-            Driver: d.Networks[name].Config.Driver,
-        })
-        return err
-    } else {
-        fmt.Printf("Network %q exists, skipping\n", name)
-    }
-    return err
-}
-
 func (d *Deployer) CheckNetworkExists(name string) error {
     filter := filters.NewArgs()
-    realname := d.Networks[name].RealName
-    filter.Add("name", realname)
+    filter.Add("name", d.Networks[name].RealName)
     list_options := types.NetworkListOptions{
         Filters: filter,
     }
@@ -77,9 +62,61 @@ func (d *Deployer) CheckNetworkExists(name string) error {
     return err
 }
 
-func (d *Deployer) ServiceCreate(service string) (types.ServiceCreateResponse, error) {
-    response, err := d.client.ServiceCreate(d.context, d.Services[service].Spec, types.ServiceCreateOptions{})
+
+func (d *Deployer) NetworkCreate(name string) error {
+    err := d.CheckNetworkExists(name)
+    if err != nil {
+        _, err := d.client.NetworkCreate(d.context, d.Networks[name].RealName, types.NetworkCreate{
+            CheckDuplicate: true,
+            Driver: d.Networks[name].Config.Driver,
+        })
+        return err
+    } else {
+        fmt.Printf("Network %q exists, skipping\n", d.Networks[name].RealName)
+    }
+    return err
+}
+
+
+func (d *Deployer) NetworkRemove(name string) error {
+    filter := filters.NewArgs()
+    filter.Add("name", d.Networks[name].RealName)
+    list_options := types.NetworkListOptions{
+        Filters: filter,
+    }
+    networkResources, err := d.client.NetworkList(d.context, list_options)
+    if err != nil {
+        return err
+    }
+    if len(networkResources) == 1 {
+      err = d.client.NetworkRemove(d.context, networkResources[0].ID)
+    } else {
+        fmt.Printf("Network %q could not be found.\n", d.Networks[name].RealName)
+    }
+    return err
+}
+
+
+func (d *Deployer) ServiceCreate(name string) (types.ServiceCreateResponse, error) {
+    response, err := d.client.ServiceCreate(d.context, d.Services[name].Spec, types.ServiceCreateOptions{})
     return response, err
 }
 
+func (d *Deployer) ServiceRemove(name string) error {
+    filter := filters.NewArgs()
+    filter.Add("name", d.Services[name].RealName)
+    list_options := types.ServiceListOptions{
+        Filter: filter,
+    }
+    serviceResources, err := d.client.ServiceList(d.context, list_options)
+    if err != nil {
+        return err
+    }
+    if len(serviceResources) == 1 {
+      err = d.client.ServiceRemove(d.context, serviceResources[0].ID)
+    } else {
+        fmt.Printf("Service %q could not be found.\n", d.Services[name].RealName)
+    }
+    return err
+}
 

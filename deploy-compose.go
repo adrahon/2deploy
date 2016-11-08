@@ -70,6 +70,8 @@ func main() {
         fmt.Println("command: ", command)
     case "create":
         fmt.Println("command: ", command)
+    case "down":
+        down(deployer)
     case "help":
         usage()
     case "restart":
@@ -207,6 +209,34 @@ func initDeployer(d *deployer.Deployer, project *project.Project) {
 
         }
     }
+}
+
+func down(deployer *deployer.Deployer) {
+
+    // Services
+    for name, _ := range deployer.Services {
+        fmt.Printf("Removing service %q\n", deployer.Services[name].RealName)
+        err := deployer.ServiceRemove(name)
+        if err != nil {
+            fmt.Println(err)
+        }
+    }
+
+    // Networks
+    // TODO check there are no remaining endpoints
+    for name, network := range deployer.Networks {
+        // remove if not external
+        if !network.Config.External.External {
+            fmt.Printf("Removing  network %q\n", deployer.Networks[name].RealName)
+            err := deployer.NetworkRemove(name)
+            if err != nil {
+                fmt.Println(err)
+            }
+        }
+    }
+
+
+
 }
 
 func usage() {
