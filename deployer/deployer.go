@@ -49,7 +49,7 @@ func NewDeployer(project string, client client.APIClient, context context.Contex
 func (d *Deployer) NetworkCreate(name string) error {
     err := d.CheckNetworkExists(name)
     if err != nil {
-        _, err := d.client.NetworkCreate(d.context, name, types.NetworkCreate{
+        _, err := d.client.NetworkCreate(d.context, d.Networks[name].RealName, types.NetworkCreate{
             CheckDuplicate: true,
             Driver: d.Networks[name].Config.Driver,
         })
