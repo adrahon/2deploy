@@ -1,10 +1,13 @@
 volumes: read only?
+named volumes
 service names and discovery?
 handle deletion
 handle individual services
 cleanup on abort/cancel
 network exists logic
 service dependencies
+skip service if exists
+network attachable?
 issue with deploy while network being deleted
 compose commands to implement:
   config             Validate and view the compose file
