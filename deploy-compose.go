@@ -77,7 +77,7 @@ func main() {
     case "rm":
         fmt.Println("command: ", command)
     case "up":
-        up(deployer, project)
+        up(deployer)
     default:
         fmt.Fprintf(os.Stderr, "No such command: %s\n", command)
         usage()
@@ -220,7 +220,7 @@ func usage() {
     fmt.Printf("  up                 Create and start services\n")
 }
 
-func up(deployer *deployer.Deployer, project *project.Project) {
+func up(deployer *deployer.Deployer) {
 
     // TODO Check if stack exists
 
@@ -245,7 +245,7 @@ func up(deployer *deployer.Deployer, project *project.Project) {
     }
 
     // Services
-    for name, _ := range project.ServiceConfigs.All() {
+    for name, _ := range deployer.Services {
         fmt.Printf("Creating service %q\n", deployer.Services[name].RealName)
         _, err := deployer.ServiceCreate(name)
         if err != nil {
