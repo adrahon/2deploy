@@ -247,7 +247,8 @@ func usage() {
     fmt.Printf("\nOptions:\n")
     flag.PrintDefaults()
     fmt.Printf("\nCommands:\n")
-    fmt.Printf("  up                 Create and start services\n")
+    fmt.Printf("  up                 Create and start services, networks, and volumes\n")
+    fmt.Printf("  down               Stop and remove containers, networks, and volumes\n")
 }
 
 func up(deployer *deployer.Deployer) {
